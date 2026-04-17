@@ -402,6 +402,12 @@ require('lazy').setup({
           find_files = {
             find_command = { 'rg', '--files', '--hidden', '--glob', '!**/.git/*' },
           },
+          buffers = {
+            mappings = {
+              i = { ['<C-d>'] = require('telescope.actions').delete_buffer },
+              n = { ['d'] = require('telescope.actions').delete_buffer },
+            },
+          },
         },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
