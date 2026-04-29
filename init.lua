@@ -405,7 +405,17 @@ require('lazy').setup({
         -- },
         pickers = {
           find_files = {
-            find_command = { 'rg', '--files', '--hidden', '--glob', '!**/.git/*' },
+            find_command = { 'rg', '--files', '--hidden', '--follow', '--glob', '!**/.git/*' },
+          },
+          live_grep = {
+            additional_args = function()
+              return { '--follow' }
+            end,
+          },
+          grep_string = {
+            additional_args = function()
+              return { '--follow' }
+            end,
           },
           buffers = {
             mappings = {
