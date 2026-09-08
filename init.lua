@@ -376,6 +376,15 @@ do
       topdelete = { text = '‾' }, ---@diagnostic disable-line: missing-fields
       changedelete = { text = '~' }, ---@diagnostic disable-line: missing-fields
     },
+    -- Inline blame for the current line. Folded into this single setup call
+    -- rather than a separate module: lazy.nvim merged duplicate plugin specs,
+    -- vim.pack has no specs to merge, so a second gitsigns.setup would just
+    -- overwrite the config above. Toggle it at runtime with <leader>tb.
+    current_line_blame = true,
+    current_line_blame_opts = {
+      delay = 300,
+      virt_text_pos = 'eol',
+    },
     -- gitsigns.nvim's recommended keymaps:
     on_attach = function(bufnr)
       -- Navigation
