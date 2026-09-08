@@ -171,6 +171,10 @@ do
   -- instead raise a dialog asking if you wish to save the current file(s)
   -- See `:help 'confirm'`
   vim.o.confirm = true
+
+  -- Start with all folds open. The fold method itself is treesitter-based and
+  -- set per-window in the treesitter section, once a parser has attached.
+  vim.o.foldlevel = 99
 end
 
 -- ============================================================
@@ -233,6 +237,18 @@ do
   vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
   vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
   vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+  -- Buffer navigation, paired with the mini.tabline strip set up further down.
+  vim.keymap.set('n', '<S-l>', '<cmd>bnext<CR>', { desc = 'Next buffer', silent = true })
+  vim.keymap.set('n', '<S-h>', '<cmd>bprevious<CR>', { desc = 'Previous buffer', silent = true })
+  vim.keymap.set('n', '<leader>bd', '<cmd>bdelete<CR>', { desc = '[B]uffer [D]elete' })
+
+  -- Readline-style line motions in insert mode, matching the shell prompt.
+  -- `<End>`/`<Home>` rather than `<C-o>$`, which mishandles end-of-line
+  -- (see `:help i_CTRL-O`). With blink.cmp's menu open, `<C-e>` cancels the
+  -- completion first and falls through on the next press.
+  vim.keymap.set('i', '<C-e>', '<End>', { desc = 'Jump to end of line' })
+  vim.keymap.set('i', '<C-a>', '<Home>', { desc = 'Jump to start of line' })
 
   -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
   -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -486,6 +502,10 @@ do
   ---@diagnostic disable-next-line: duplicate-set-field
   statusline.section_location = function() return '%2l:%-2v' end
 
+  -- Tabline showing open buffers. Pair with the <S-h>/<S-l> keymaps in the
+  -- keymaps section to move between them.
+  require('mini.tabline').setup()
+
   -- ... and there is more!
   --  Check out: https://github.com/nvim-mini/mini.nvim
 end
@@ -540,7 +560,23 @@ do
     --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
     --   },
     -- },
-    -- pickers = {}
+    pickers = {
+      find_files = {
+        find_command = { 'rg', '--files', '--hidden', '--follow', '--glob', '!**/.git/*' },
+      },
+      live_grep = {
+        additional_args = function() return { '--follow' } end,
+      },
+      grep_string = {
+        additional_args = function() return { '--follow' } end,
+      },
+      buffers = {
+        mappings = {
+          i = { ['<C-d>'] = require('telescope.actions').delete_buffer },
+          n = { ['d'] = require('telescope.actions').delete_buffer },
+        },
+      },
+    },
     extensions = {
       ['ui-select'] = { require('telescope.themes').get_dropdown() },
     },
@@ -961,8 +997,8 @@ do
 
     -- Enable treesitter based folds
     -- For more info on folds see `:help folds`
-    -- vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-    -- vim.wo.foldmethod = 'expr'
+    vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+    vim.wo.foldmethod = 'expr'
 
     -- Check if treesitter indentation is available for this language, and if so enable it
     -- in case there is no indent query, the indentexpr will fallback to the vim's built in one
@@ -1019,7 +1055,7 @@ do
   -- NOTE: You can add your own plugins, configuration, etc. in `lua/custom/plugins/*.lua`.
   --
   -- For independent modules, uncomment the convenience loader:
-  -- require 'custom.plugins'
+  require 'custom.plugins'
   --
   -- `custom.plugins` automatically loads files from that directory, but their
   -- order is unspecified. If plugins depend on each other, keep them in the same
