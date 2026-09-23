@@ -335,8 +335,8 @@ do
   })
 end
 
----Because most plugins are hosted on GitHub, you can use the helper
----function to have less repetition in the following sections.
+--- Because most plugins are hosted on GitHub, you can use the helper
+--- function to have less repetition in the following sections.
 ---@param repo string
 ---@return string
 local function gh(repo) return 'https://github.com/' .. repo end
@@ -548,7 +548,7 @@ do
   -- Telescope picker. This is really useful to discover what Telescope can
   -- do as well as how to actually do it!
 
-  ---@type (string|vim.pack.Spec)[]
+  ---@type (string | vim.pack.Spec)[]
   local telescope_plugins = {
     gh 'nvim-lua/plenary.nvim',
     gh 'nvim-telescope/telescope.nvim',
@@ -571,7 +571,24 @@ do
     -- },
     pickers = {
       find_files = {
-        find_command = { 'rg', '--files', '--hidden', '--follow', '--glob', '!**/.git/*' },
+        -- rg honours .gitignore and the global ~/.config/git/ignore even for
+        -- tracked files, so a second pass adds back the ignored files that are
+        -- edited by hand: plan docs, local agent config and env files. It skips
+        -- the heavy build directories, and awk drops files both passes list.
+        -- <leader>sF below searches everything.
+        find_command = {
+          'sh',
+          '-c',
+          [[
+            {
+              rg --files --hidden --follow --glob '!**/.git/*'
+              rg --files --hidden --follow --no-ignore-vcs \
+                --glob '!{node_modules,target,dist,.venv,venv}/' \
+                --glob '**/.claude/plans/**' --glob '**/CLAUDE.local.md' \
+                --glob '**/.claude/settings.local.json' --glob '**/.env*'
+            } 2>/dev/null | awk '!seen[$0]++'
+          ]],
+        },
       },
       live_grep = {
         additional_args = function() return { '--follow' } end,
@@ -600,6 +617,17 @@ do
   vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
   vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
   vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+  vim.keymap.set(
+    'n',
+    '<leader>sF',
+    function()
+      builtin.find_files {
+        prompt_title = 'Find Files (including ignored)',
+        find_command = { 'rg', '--files', '--hidden', '--follow', '--no-ignore', '--glob', '!**/.git/*' },
+      }
+    end,
+    { desc = '[S]earch all [F]iles, ignored too' }
+  )
   vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
   vim.keymap.set({ 'n', 'v' }, '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
   vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
@@ -1001,6 +1029,10 @@ do
   local function treesitter_try_attach(buf, language)
     -- Check if a parser exists and load it
     if not vim.treesitter.language.add(language) then return end
+
+    -- Check if the buffer is valid (might not be after install completes)
+    if not vim.api.nvim_buf_is_valid(buf) then return end
+
     -- Enable syntax highlighting and other treesitter features
     vim.treesitter.start(buf, language)
 
