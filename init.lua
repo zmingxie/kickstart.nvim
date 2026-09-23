@@ -571,7 +571,24 @@ do
     -- },
     pickers = {
       find_files = {
-        find_command = { 'rg', '--files', '--hidden', '--follow', '--glob', '!**/.git/*' },
+        -- rg honours .gitignore and the global ~/.config/git/ignore even for
+        -- tracked files, so a second pass adds back the ignored files that are
+        -- edited by hand: plan docs, local agent config and env files. It skips
+        -- the heavy build directories, and awk drops files both passes list.
+        -- <leader>sF below searches everything.
+        find_command = {
+          'sh',
+          '-c',
+          [[
+            {
+              rg --files --hidden --follow --glob '!**/.git/*'
+              rg --files --hidden --follow --no-ignore-vcs \
+                --glob '!{node_modules,target,dist,.venv,venv}/' \
+                --glob '**/.claude/plans/**' --glob '**/CLAUDE.local.md' \
+                --glob '**/.claude/settings.local.json' --glob '**/.env*'
+            } 2>/dev/null | awk '!seen[$0]++'
+          ]],
+        },
       },
       live_grep = {
         additional_args = function() return { '--follow' } end,
@@ -600,6 +617,17 @@ do
   vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
   vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
   vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+  vim.keymap.set(
+    'n',
+    '<leader>sF',
+    function()
+      builtin.find_files {
+        prompt_title = 'Find Files (including ignored)',
+        find_command = { 'rg', '--files', '--hidden', '--follow', '--no-ignore', '--glob', '!**/.git/*' },
+      }
+    end,
+    { desc = '[S]earch all [F]iles, ignored too' }
+  )
   vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
   vim.keymap.set({ 'n', 'v' }, '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
   vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
