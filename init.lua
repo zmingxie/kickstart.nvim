@@ -267,6 +267,26 @@ do
     group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
     callback = function() vim.hl.on_yank() end,
   })
+
+  -- Also send yanks to the terminal's clipboard over OSC 52.
+  --  'unnamedplus' runs pbcopy on the machine Neovim runs on, so a yank over SSH, or in a
+  --  herdr pane on another Mac, lands in that machine's pasteboard instead of yours.
+  --  Ghostty and herdr pass OSC 52 back to the viewing machine; locally it rewrites the
+  --  same text. Yanks only, not deletes: herdr shows a "copied" notice for every write.
+  --  See `:help clipboard-osc52`
+  vim.api.nvim_create_autocmd('TextYankPost', {
+    desc = 'Copy yanks to the terminal clipboard over OSC 52',
+    group = vim.api.nvim_create_augroup('kickstart-osc52-yank', { clear = true }),
+    callback = function()
+      local ev = vim.v.event
+      if ev.operator ~= 'y' or not vim.tbl_contains({ '', '+', '*' }, ev.regname) then return end
+      local lines = ev.regcontents
+      -- Match pbcopy, which gets a trailing newline for linewise yanks
+      if ev.regtype == 'V' then table.insert(lines, '') end
+      local copy = require('vim.ui.clipboard.osc52').copy '+'
+      copy(lines)
+    end,
+  })
 end
 
 -- ============================================================
