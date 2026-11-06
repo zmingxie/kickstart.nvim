@@ -117,6 +117,9 @@ do
   -- Ghostty already sends 3 scroll steps per wheel notch (discrete:3), so
   -- scroll 1 line per step here: 3 lines per notch instead of 9.
   vim.o.mousescroll = 'ver:1,hor:2'
+  -- Scroll by screen rows, not file lines, so one step through a long wrapped
+  -- line (a markdown paragraph) moves 1 row instead of the whole line.
+  vim.o.smoothscroll = true
 
   -- Don't show the mode, since it's already in the status line
   vim.o.showmode = false
